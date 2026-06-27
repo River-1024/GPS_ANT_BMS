@@ -187,7 +187,6 @@
             <Button
                 android:id="@+id/buttonPowerBar"
                 style="@style/DashboardToggleButton"
-                android:selected="true"
                 android:text="功率条" />
 
             <Button
