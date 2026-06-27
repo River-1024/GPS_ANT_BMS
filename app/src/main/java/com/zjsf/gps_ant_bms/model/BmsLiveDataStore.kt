@@ -15,6 +15,7 @@ data class DashboardData(
     val balancerTemp: Int = 0,
     val soh: Int = 0,
     val lastUpdatedMillis: Long = 0L,
+    val isBmsConnected: Boolean = false,
     val hasBmsData: Boolean = false,
     val hasGpsData: Boolean = false
 )
@@ -49,6 +50,7 @@ object BmsLiveDataStore {
                 mosTemp = bmsData.mosTemp,
                 balancerTemp = bmsData.balancerTemp,
                 soh = bmsData.soh,
+                isBmsConnected = true,
                 hasBmsData = true,
                 lastUpdatedMillis = System.currentTimeMillis()
             )
@@ -56,6 +58,18 @@ object BmsLiveDataStore {
             powerHistory.addLast(bmsData.power)
             while (powerHistory.size > MAX_POWER_POINTS) {
                 powerHistory.removeFirst()
+            }
+        }
+    }
+
+    fun updateBmsConnectionState(isConnected: Boolean) {
+        synchronized(lock) {
+            data = data.copy(
+                isBmsConnected = isConnected,
+                hasBmsData = if (isConnected) data.hasBmsData else false
+            )
+            if (!isConnected) {
+                powerHistory.clear()
             }
         }
     }

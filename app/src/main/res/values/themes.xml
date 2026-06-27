@@ -7,6 +7,12 @@
 
     <style name="Theme.GPS_ANT_BMS" parent="Base.Theme.GPS_ANT_BMS" />
 
+    <style name="Theme.GPS_ANT_BMS.Dashboard" parent="Theme.GPS_ANT_BMS">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+    </style>
+
     <style name="DashboardMetricTile">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>

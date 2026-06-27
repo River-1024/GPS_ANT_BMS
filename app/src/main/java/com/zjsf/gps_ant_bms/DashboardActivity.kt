@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.zjsf.gps_ant_bms.model.DashboardData
 import com.zjsf.gps_ant_bms.model.BmsLiveDataStore
 import com.zjsf.gps_ant_bms.ui.PowerBarView
 import com.zjsf.gps_ant_bms.ui.PowerChartView
@@ -46,6 +47,7 @@ class DashboardActivity : AppCompatActivity() {
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     private var powerMode = POWER_MODE_BAR
     private var maxPower = DEFAULT_MAX_POWER
+    private var lastLoggedPreviewMode: Boolean? = null
 
     private val refreshRunnable = object : Runnable {
         override fun run() {
@@ -56,23 +58,37 @@ class DashboardActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        hideSystemBars()
-        setContentView(R.layout.activity_dashboard)
-        initViews()
-        loadPreferences()
-        bindEvents()
-        applyPowerMode()
-        refreshDashboard()
+        AppLogger.i(TAG, "onCreate start")
+        try {
+            setContentView(R.layout.activity_dashboard)
+            AppLogger.d(TAG, "content view set")
+            hideSystemBars()
+            AppLogger.d(TAG, "system bars hidden after content view")
+            initViews()
+            AppLogger.d(TAG, "views initialized")
+            loadPreferences()
+            AppLogger.d(TAG, "preferences loaded, powerMode=$powerMode, maxPower=$maxPower")
+            bindEvents()
+            applyPowerMode()
+            refreshDashboard()
+            AppLogger.i(TAG, "onCreate complete")
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "onCreate failed", e)
+            Toast.makeText(this, "仪表盘加载失败，日志已记录", Toast.LENGTH_SHORT).show()
+            finish()
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        AppLogger.d(TAG, "onResume")
         hideSystemBars()
         handler.post(refreshRunnable)
     }
 
     override fun onPause() {
         super.onPause()
+        AppLogger.d(TAG, "onPause")
         handler.removeCallbacks(refreshRunnable)
         saveMaxPowerFromInput(showToast = false)
     }
@@ -137,8 +153,17 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun refreshDashboard() {
-        val data = BmsLiveDataStore.snapshot()
-        val history = BmsLiveDataStore.powerHistorySnapshot()
+        val liveData = BmsLiveDataStore.snapshot()
+        val previewMode = !liveData.isBmsConnected
+        val data = if (previewMode) PREVIEW_DATA else liveData
+        val history = if (previewMode) PREVIEW_POWER_HISTORY else BmsLiveDataStore.powerHistorySnapshot()
+        if (lastLoggedPreviewMode != previewMode) {
+            AppLogger.i(
+                TAG,
+                "refresh mode changed: preview=$previewMode, connected=${liveData.isBmsConnected}, hasBmsData=${liveData.hasBmsData}, history=${history.size}"
+            )
+            lastLoggedPreviewMode = previewMode
+        }
 
         textSoc.text = "${data.soc}%"
         textSoc.setTextColor(
@@ -166,12 +191,22 @@ class DashboardActivity : AppCompatActivity() {
             }
         )
 
-        textBleStatus.text = if (data.hasBmsData) "蓝牙已连接" else "蓝牙等待数据"
-        textGpsStatus.text = if (data.hasGpsData) "GPS 正常" else "GPS 等待定位"
-        textUpdateTime.text = if (data.lastUpdatedMillis > 0L) {
-            "更新时间 ${timeFormat.format(Date(data.lastUpdatedMillis))}"
+        textBleStatus.text = when {
+            previewMode -> "预览模式"
+            data.hasBmsData -> "蓝牙已连接"
+            else -> "蓝牙已连接，等待数据"
+        }
+        textGpsStatus.text = if (previewMode) {
+            "GPS 预览"
+        } else if (data.hasGpsData) {
+            "GPS 正常"
         } else {
-            "更新时间 --:--:--"
+            "GPS 等待定位"
+        }
+        textUpdateTime.text = when {
+            previewMode -> "未连接保护板"
+            data.lastUpdatedMillis > 0L -> "更新时间 ${timeFormat.format(Date(data.lastUpdatedMillis))}"
+            else -> "更新时间 --:--:--"
         }
 
         powerBarView.setPower(data.power, maxPower)
@@ -204,25 +239,43 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun hideSystemBars() {
+        AppLogger.d(TAG, "hideSystemBars sdk=${android.os.Build.VERSION.SDK_INT}")
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            window.insetsController?.let {
-                it.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
-                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            val hidden = runCatching {
+                val controller = window.decorView.windowInsetsController
+                if (controller != null) {
+                    controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                    controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    true
+                } else {
+                    false
+                }
+            }.onFailure {
+                AppLogger.w(TAG, "hideSystemBars failed, using legacy flags", it)
+            }.getOrDefault(false)
+
+            if (!hidden) {
+                applyLegacySystemUiFlags()
             }
         } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                )
+            applyLegacySystemUiFlags()
         }
     }
 
+    private fun applyLegacySystemUiFlags() {
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            )
+    }
+
     companion object {
+        private const val TAG = "DashboardActivity"
         private const val PREFS_NAME = "DashboardPrefs"
         private const val PREF_POWER_MODE = "power_mode"
         private const val PREF_MAX_POWER = "max_power"
@@ -231,5 +284,22 @@ class DashboardActivity : AppCompatActivity() {
         private const val DEFAULT_MAX_POWER = 1000.0
         private const val MIN_MAX_POWER = 100.0
         private const val MAX_MAX_POWER = 20000.0
+
+        private val PREVIEW_DATA = DashboardData(
+            speed = 31.8,
+            voltage = 100.0,
+            current = 2.0,
+            voltageDiff = 32,
+            soc = 80,
+            power = 200.0,
+            capacity = 400.0,
+            remainingCharge = 320.0,
+            mosTemp = 31,
+            soh = 96
+        )
+        private val PREVIEW_POWER_HISTORY = listOf(
+            80.0, 120.0, 160.0, 130.0, 210.0, 260.0, 230.0, 310.0,
+            280.0, 350.0, 320.0, 390.0, 430.0, 380.0, 250.0, 200.0
+        )
     }
 }

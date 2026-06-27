@@ -1,14 +1,17 @@
 package com.zjsf.gps_ant_bms
 
 import android.Manifest
+import android.bluetooth.BluetoothProfile
 import android.app.ActivityManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -31,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bmsDataTextView: TextView
     private lateinit var scanButton: android.widget.Button
     private lateinit var dashboardButton: android.widget.Button
+    private lateinit var viewLogButton: android.widget.Button
     private lateinit var floatingWindowSwitch: android.widget.Switch
     private lateinit var hideFromRecentsSwitch: android.widget.Switch
     
@@ -74,6 +78,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLogger.i(TAG, "onCreate")
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -91,6 +96,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         applyHideFromRecents(isHideFromRecentsEnabled())
+
+        if (AppLogger.consumeCrashPending()) {
+            findViewById<View>(R.id.main).post {
+                showLogDialog("上次崩溃日志")
+            }
+        }
     }
 
     private fun isFloatingWindowEnabled(): Boolean {
@@ -164,6 +175,7 @@ class MainActivity : AppCompatActivity() {
         bmsDataTextView = findViewById(R.id.textViewBmsData)
         scanButton = findViewById(R.id.buttonScanBle)
         dashboardButton = findViewById(R.id.buttonDashboard)
+        viewLogButton = findViewById(R.id.buttonViewLog)
         floatingWindowSwitch = findViewById(R.id.switchFloatingWindow)
         hideFromRecentsSwitch = findViewById(R.id.switchHideFromRecents)
         
@@ -195,9 +207,41 @@ class MainActivity : AppCompatActivity() {
             showScanDialog()
         }
 
-        dashboardButton.setOnClickListener {
-            startActivity(android.content.Intent(this, DashboardActivity::class.java))
+        viewLogButton.setOnClickListener {
+            AppLogger.i(TAG, "view log button clicked")
+            showLogDialog("应用日志")
         }
+
+        dashboardButton.setOnClickListener {
+            AppLogger.i(TAG, "dashboard button clicked, starting DashboardActivity")
+            try {
+                startActivity(Intent(this, DashboardActivity::class.java))
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "failed to start DashboardActivity", e)
+                Toast.makeText(this, "仪表盘启动失败，正在显示日志", Toast.LENGTH_SHORT).show()
+                showLogDialog("仪表盘启动失败")
+            }
+        }
+    }
+
+    private fun showLogDialog(title: String) {
+        val logView = TextView(this).apply {
+            text = AppLogger.readLog()
+            setTextIsSelectable(true)
+            textSize = 12f
+            typeface = android.graphics.Typeface.MONOSPACE
+            setPadding(24, 16, 24, 16)
+        }
+        val scrollView = android.widget.ScrollView(this).apply {
+            addView(logView)
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(scrollView)
+            .setPositiveButton("关闭", null)
+            .setNeutralButton("清空日志") { _, _ -> AppLogger.clearLog() }
+            .show()
     }
 
     private fun initModules() {
@@ -254,7 +298,8 @@ class MainActivity : AppCompatActivity() {
                 bmsData?.let { updateBmsUi(it) }
             },
             onConnectionStateChanged = { newState ->
-                // Handle connection state if needed
+                AppLogger.i(TAG, "BMS bluetooth state changed: $newState")
+                BmsLiveDataStore.updateBmsConnectionState(newState == BluetoothProfile.STATE_CONNECTED)
             }
         )
     }
@@ -267,10 +312,10 @@ class MainActivity : AppCompatActivity() {
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled) {
                 try {
                     val device = bluetoothAdapter.getRemoteDevice(lastAddress)
-                    android.util.Log.i("MainActivity", "自动连接上次设备: $lastAddress")
+                    AppLogger.i(TAG, "自动连接上次设备: $lastAddress")
                     bmsBluetoothManager.connect(device)
                 } catch (e: Exception) {
-                    android.util.Log.e("MainActivity", "自动连接失败: ${e.message}")
+                    AppLogger.e(TAG, "自动连接失败", e)
                 }
             }
         }
@@ -371,6 +416,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        AppLogger.d(TAG, "onResume")
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationHelper.startLocationUpdates()
         }
@@ -381,15 +427,21 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        AppLogger.d(TAG, "onPause")
         locationHelper.stopLocationUpdates()
         bleScanner.stopScan()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        AppLogger.i(TAG, "onDestroy")
         locationHelper.stopLocationUpdates()
         bleScanner.stopScan()
         bmsBluetoothManager.disconnect()
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 
 }

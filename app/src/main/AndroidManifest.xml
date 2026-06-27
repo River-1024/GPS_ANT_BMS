@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:name=".BmsApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -35,7 +36,7 @@
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.GPS_ANT_BMS" />
+            android:theme="@style/Theme.GPS_ANT_BMS.Dashboard" />
 
         <activity
             android:name=".MainActivity"
