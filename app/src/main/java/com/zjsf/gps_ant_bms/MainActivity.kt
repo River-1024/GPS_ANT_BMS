@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.zjsf.gps_ant_bms.bluetooth.BleScanner
 import com.zjsf.gps_ant_bms.bluetooth.BmsBluetoothManager
 import com.zjsf.gps_ant_bms.location.LocationHelper
+import com.zjsf.gps_ant_bms.model.BmsLiveDataStore
 import com.zjsf.gps_ant_bms.model.BleDevice
 import com.zjsf.gps_ant_bms.protocol.AntProtocol
 import com.zjsf.gps_ant_bms.ui.BleDeviceAdapter
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gpsSpeedTextView: TextView
     private lateinit var bmsDataTextView: TextView
     private lateinit var scanButton: android.widget.Button
+    private lateinit var dashboardButton: android.widget.Button
     private lateinit var floatingWindowSwitch: android.widget.Switch
     private lateinit var hideFromRecentsSwitch: android.widget.Switch
     
@@ -161,6 +163,7 @@ class MainActivity : AppCompatActivity() {
         gpsSpeedTextView = findViewById(R.id.textViewGpsSpeed)
         bmsDataTextView = findViewById(R.id.textViewBmsData)
         scanButton = findViewById(R.id.buttonScanBle)
+        dashboardButton = findViewById(R.id.buttonDashboard)
         floatingWindowSwitch = findViewById(R.id.switchFloatingWindow)
         hideFromRecentsSwitch = findViewById(R.id.switchHideFromRecents)
         
@@ -191,6 +194,10 @@ class MainActivity : AppCompatActivity() {
         scanButton.setOnClickListener {
             showScanDialog()
         }
+
+        dashboardButton.setOnClickListener {
+            startActivity(android.content.Intent(this, DashboardActivity::class.java))
+        }
     }
 
     private fun initModules() {
@@ -199,6 +206,7 @@ class MainActivity : AppCompatActivity() {
 
         locationHelper = LocationHelper(this) { location ->
             currentSpeed = location.speed * 3.6
+            BmsLiveDataStore.updateSpeed(currentSpeed)
             gpsSpeedTextView.text = "GPS Speed: %.2f km/h".format(currentSpeed)
             FloatingWindowService.updateData(currentSpeed, currentVoltage, currentCurrent, currentVoltageDiff, currentSoc)
         }
@@ -273,6 +281,7 @@ class MainActivity : AppCompatActivity() {
         currentCurrent = data.current
         currentVoltageDiff = data.voltageDiff
         currentSoc = data.soc
+        BmsLiveDataStore.updateBmsData(data)
         FloatingWindowService.updateData(currentSpeed, currentVoltage, currentCurrent, currentVoltageDiff, currentSoc)
 
         val sb = StringBuilder()

@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/dashboardRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_dashboard_root"
+    android:padding="12dp"
+    tools:context=".DashboardActivity">
+
+    <TextView
+        android:id="@+id/textSoc"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_dashboard_panel"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:text="80%"
+        android:textColor="#77F06F"
+        android:textSize="74sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@id/powerPanel"
+        app:layout_constraintEnd_toStartOf="@id/metricGrid"
+        app:layout_constraintHeight_percent="0.32"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.22" />
+
+    <LinearLayout
+        android:id="@+id/metricGrid"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="@id/textSoc"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/textSoc"
+        app:layout_constraintTop_toTopOf="@id/textSoc">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="电压" />
+                <TextView
+                    android:id="@+id/textVoltage"
+                    style="@style/DashboardMetricValue"
+                    android:text="100.00V" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="电流" />
+                <TextView
+                    android:id="@+id/textCurrent"
+                    style="@style/DashboardMetricValue"
+                    android:text="2.0A"
+                    android:textColor="#80EAFF" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="速度" />
+                <TextView
+                    android:id="@+id/textSpeed"
+                    style="@style/DashboardMetricValue"
+                    android:text="31.8km/h"
+                    android:textColor="#77F06F" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="温度" />
+                <TextView
+                    android:id="@+id/textTemp"
+                    style="@style/DashboardMetricValue"
+                    android:text="31℃"
+                    android:textColor="#FFD86B" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="压差" />
+                <TextView
+                    android:id="@+id/textVoltageDiff"
+                    style="@style/DashboardMetricValue"
+                    android:text="32mV" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="容量" />
+                <TextView
+                    android:id="@+id/textCapacity"
+                    style="@style/DashboardMetricValue"
+                    android:text="400Ah" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="剩余" />
+                <TextView
+                    android:id="@+id/textRemaining"
+                    style="@style/DashboardMetricValue"
+                    android:text="320Ah" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/DashboardMetricTile">
+                <TextView
+                    style="@style/DashboardMetricLabel"
+                    android:text="健康度" />
+                <TextView
+                    android:id="@+id/textSoh"
+                    style="@style/DashboardMetricValue"
+                    android:text="96%" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/powerPanel"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/bg_dashboard_panel_dark"
+        android:orientation="vertical"
+        android:padding="12dp"
+        app:layout_constraintBottom_toTopOf="@id/statusBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.46"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textSoc">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="功率"
+                android:textColor="#B9D2CC"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/textPower"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:includeFontPadding="false"
+                android:text="200W"
+                android:textColor="#77F06F"
+                android:textSize="44sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/buttonPowerBar"
+                style="@style/DashboardToggleButton"
+                android:selected="true"
+                android:text="功率条" />
+
+            <Button
+                android:id="@+id/buttonPowerChart"
+                style="@style/DashboardToggleButton"
+                android:layout_marginStart="8dp"
+                android:text="曲线图" />
+
+            <EditText
+                android:id="@+id/editMaxPower"
+                android:layout_width="82dp"
+                android:layout_height="34dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_dashboard_input"
+                android:gravity="center_vertical|end"
+                android:inputType="number"
+                android:maxLines="1"
+                android:text="1000"
+                android:textColor="#F4FFFB"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="W 满量程"
+                android:textColor="#B9D2CC"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/powerVisualContainer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1">
+
+            <com.zjsf.gps_ant_bms.ui.PowerBarView
+                android:id="@+id/powerBarView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="2dp" />
+
+            <com.zjsf.gps_ant_bms.ui.PowerChartView
+                android:id="@+id/powerChartView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="2dp"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/statusBar"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_dashboard_panel"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/textBleStatus"
+            style="@style/DashboardStatusText"
+            android:text="蓝牙等待数据" />
+
+        <TextView
+            android:id="@+id/textGpsStatus"
+            style="@style/DashboardStatusText"
+            android:text="GPS 等待定位" />
+
+        <TextView
+            android:id="@+id/textUpdateTime"
+            style="@style/DashboardStatusText"
+            android:layout_weight="1"
+            android:text="更新时间 --:--:--" />
+
+        <Button
+            android:id="@+id/buttonBack"
+            style="@style/DashboardToggleButton"
+            android:text="返回" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

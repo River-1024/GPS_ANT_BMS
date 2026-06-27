@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BMS 横屏仪表盘视觉稿</title>
+  <style>
+    :root {
+      --bg: #142423;
+      --panel: #2f4b49;
+      --panel-2: #243c3a;
+      --line: rgba(224, 255, 248, 0.72);
+      --text: #f4fffb;
+      --muted: #b9d2cc;
+      --green: #77f06f;
+      --cyan: #80eaff;
+      --yellow: #ffd86b;
+      --red: #ff706f;
+      --blue: #62a8ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #07100f;
+      color: var(--text);
+      font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    }
+
+    .phone {
+      width: min(96vw, 1180px);
+      aspect-ratio: 16 / 9;
+      padding: clamp(10px, 1.6vw, 20px);
+      background:
+        linear-gradient(140deg, rgba(255,255,255,0.08), transparent 30%),
+        radial-gradient(circle at 10% 0%, rgba(119,240,111,0.14), transparent 28%),
+        var(--bg);
+      border: 5px solid rgba(230, 255, 250, 0.62);
+      border-radius: 18px;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62), inset 0 0 0 2px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+
+    .dashboard {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 0.92fr 3.08fr;
+      grid-template-rows: 0.82fr 1.16fr auto;
+      gap: clamp(8px, 1.2vw, 14px);
+    }
+
+    .tile,
+    .power-panel,
+    .status-bar {
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.08)), var(--panel);
+      box-shadow: inset 0 0 18px rgba(255,255,255,0.04);
+    }
+
+    .soc {
+      grid-column: 1;
+      grid-row: 1;
+      padding: clamp(8px, 1.2vw, 14px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .soc-label {
+      font-size: clamp(15px, 1.8vw, 24px);
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .soc-value {
+      font-size: clamp(68px, 9.8vw, 126px);
+      line-height: 0.86;
+      font-weight: 900;
+      color: var(--green);
+      text-shadow: 0 0 22px rgba(119, 240, 111, 0.3);
+      letter-spacing: 0;
+    }
+
+    .soc-value span {
+      font-size: 0.34em;
+      margin-left: 4px;
+    }
+
+    .metric-grid {
+      grid-column: 2;
+      grid-row: 1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: clamp(8px, 1.2vw, 14px);
+    }
+
+    .metric {
+      min-width: 0;
+      padding: clamp(10px, 1.4vw, 16px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: clamp(13px, 1.3vw, 18px);
+      white-space: nowrap;
+    }
+
+    .metric .value {
+      margin-top: 4px;
+      font-size: clamp(22px, 3vw, 40px);
+      line-height: 1;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .metric .unit {
+      font-size: 0.48em;
+      color: var(--text);
+      margin-left: 3px;
+    }
+
+    .metric.voltage .value { color: var(--text); }
+    .metric.current .value { color: var(--cyan); }
+    .metric.speed .value { color: var(--green); }
+    .metric.temp .value { color: var(--yellow); }
+
+    .power-panel {
+      grid-column: 1 / 3;
+      grid-row: 2;
+      padding: clamp(12px, 1.6vw, 20px);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(0,0,0,0.1)), var(--panel-2);
+    }
+
+    .power-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .power-title {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .power-title .name {
+      color: var(--muted);
+      font-size: clamp(16px, 1.6vw, 22px);
+    }
+
+    .power-title .watts {
+      font-size: clamp(34px, 5vw, 66px);
+      line-height: 1;
+      font-weight: 900;
+      color: var(--green);
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+
+    button,
+    input {
+      height: 34px;
+      border-radius: 6px;
+      border: 1px solid rgba(230, 255, 250, 0.58);
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    button {
+      min-width: 72px;
+      cursor: pointer;
+    }
+
+    button.active {
+      background: var(--green);
+      color: #10200f;
+      border-color: var(--green);
+      font-weight: 800;
+    }
+
+    input {
+      width: 88px;
+      padding: 0 8px;
+      text-align: right;
+    }
+
+    .visual {
+      min-height: 0;
+      position: relative;
+    }
+
+    .bar-mode,
+    .chart-mode {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+
+    .visual[data-mode="bar"] .bar-mode,
+    .visual[data-mode="chart"] .chart-mode {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .bar-shell {
+      height: 100%;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+    }
+
+    .bar-track {
+      height: clamp(46px, 8.2vw, 92px);
+      border: 2px solid rgba(230, 255, 250, 0.6);
+      border-radius: 8px;
+      background: rgba(5, 19, 18, 0.66);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      width: 20%;
+      height: 100%;
+      background: linear-gradient(90deg, #35d86d, #c4ff72);
+      box-shadow: 0 0 24px rgba(119,240,111,0.45);
+      animation: pulseWidth 2.8s ease-in-out infinite;
+    }
+
+    .bar-track::after {
+      content: "20%";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: clamp(22px, 2.8vw, 36px);
+      font-weight: 900;
+      color: var(--text);
+      text-shadow: 0 1px 6px #000;
+    }
+
+    .scale {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: clamp(13px, 1.4vw, 18px);
+    }
+
+    @keyframes pulseWidth {
+      0%, 100% { width: 20%; }
+      45% { width: 38%; }
+      70% { width: 28%; }
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 8px;
+      background:
+        linear-gradient(rgba(230,255,250,0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(230,255,250,0.08) 1px, transparent 1px),
+        rgba(5, 19, 18, 0.58);
+      background-size: 100% 33.3%, 10% 100%;
+      border: 1px solid rgba(230, 255, 250, 0.45);
+    }
+
+    .status-bar {
+      grid-column: 1 / 3;
+      grid-row: 3;
+      min-height: 44px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: clamp(13px, 1.4vw, 18px);
+    }
+
+    .status-items {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .back {
+      color: var(--text);
+      border: 1px solid rgba(230, 255, 250, 0.46);
+      border-radius: 6px;
+      padding: 6px 12px;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <main class="phone" aria-label="BMS 横屏仪表盘视觉稿">
+    <section class="dashboard">
+      <article class="tile soc">
+        <div class="soc-value">80<span>%</span></div>
+      </article>
+
+      <section class="metric-grid">
+        <article class="tile metric voltage">
+          <div class="label">电压</div>
+          <div class="value">100.00<span class="unit">V</span></div>
+        </article>
+        <article class="tile metric current">
+          <div class="label">电流</div>
+          <div class="value">2.0<span class="unit">A</span></div>
+        </article>
+        <article class="tile metric speed">
+          <div class="label">速度</div>
+          <div class="value">31.8<span class="unit">km/h</span></div>
+        </article>
+        <article class="tile metric temp">
+          <div class="label">温度</div>
+          <div class="value">31<span class="unit">℃</span></div>
+        </article>
+        <article class="tile metric">
+          <div class="label">压差</div>
+          <div class="value">32<span class="unit">mV</span></div>
+        </article>
+        <article class="tile metric">
+          <div class="label">容量</div>
+          <div class="value">400<span class="unit">Ah</span></div>
+        </article>
+        <article class="tile metric">
+          <div class="label">剩余</div>
+          <div class="value">320<span class="unit">Ah</span></div>
+        </article>
+        <article class="tile metric">
+          <div class="label">健康度</div>
+          <div class="value">96<span class="unit">%</span></div>
+        </article>
+      </section>
+
+      <section class="power-panel">
+        <div class="power-head">
+          <div class="power-title">
+            <span class="name">功率</span>
+            <span class="watts">200W</span>
+          </div>
+          <div class="controls">
+            <button id="barBtn" class="active" type="button">功率条</button>
+            <button id="chartBtn" type="button">曲线图</button>
+            <input id="scaleInput" value="1000" inputmode="numeric" aria-label="满量程功率">
+            <span style="color: var(--muted); white-space: nowrap;">W 满量程</span>
+          </div>
+        </div>
+
+        <div id="visual" class="visual" data-mode="bar">
+          <div class="bar-mode">
+            <div class="bar-shell">
+              <div class="bar-track">
+                <div class="bar-fill"></div>
+              </div>
+              <div class="scale">
+                <span>0W</span>
+                <span>500W</span>
+                <span>1000W</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-mode">
+            <svg viewBox="0 0 720 220" role="img" aria-label="功率曲线图">
+              <line x1="0" y1="110" x2="720" y2="110" stroke="rgba(244,255,251,0.48)" stroke-width="2"/>
+              <text x="10" y="28" fill="#b9d2cc" font-size="18">+1000W</text>
+              <text x="10" y="104" fill="#b9d2cc" font-size="18">0W</text>
+              <text x="10" y="204" fill="#b9d2cc" font-size="18">-1000W</text>
+              <polyline
+                points="0,112 45,102 90,84 135,94 180,70 225,80 270,58 315,88 360,76 405,102 450,92 495,65 540,82 585,52 630,74 675,68 720,90"
+                fill="none"
+                stroke="#77f06f"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"/>
+              <polyline
+                points="0,112 45,118 90,126 135,116 180,132 225,120 270,138 315,110"
+                fill="none"
+                stroke="#62a8ff"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                opacity="0.82"/>
+              <circle cx="720" cy="90" r="8" fill="#77f06f"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <footer class="status-bar">
+        <div class="status-items">
+          <span><i class="dot"></i>蓝牙已连接</span>
+          <span><i class="dot"></i>GPS 正常</span>
+          <span>更新时间 12:48:26</span>
+          <span>设备 ANT-BMS</span>
+        </div>
+        <div class="back">返回</div>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    const visual = document.getElementById("visual");
+    const barBtn = document.getElementById("barBtn");
+    const chartBtn = document.getElementById("chartBtn");
+
+    function setMode(mode) {
+      visual.dataset.mode = mode;
+      barBtn.classList.toggle("active", mode === "bar");
+      chartBtn.classList.toggle("active", mode === "chart");
+    }
+
+    barBtn.addEventListener("click", () => setMode("bar"));
+    chartBtn.addEventListener("click", () => setMode("chart"));
+  </script>
+</body>
+</html>
