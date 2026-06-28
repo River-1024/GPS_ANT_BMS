@@ -139,6 +139,11 @@ class BmsBluetoothManager(
         }
     }
 
+    fun setPollingInterval(intervalMs: Long) {
+        pollingInterval = intervalMs.coerceIn(200L, 60_000L)
+        Log.i("BmsBtManager", "轮询间隔已更新: ${pollingInterval}ms")
+    }
+
     fun stopPolling() {
         isPolling = false
         handler.removeCallbacks(pollingRunnable)
