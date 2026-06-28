@@ -83,7 +83,6 @@ import com.zjsf.gps_ant_bms.model.previewBmsData
 import com.zjsf.gps_ant_bms.model.remainingMileageKm
 import com.zjsf.gps_ant_bms.model.toAndroidColor
 import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -556,13 +555,14 @@ private fun PowerPanel(
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xAA07110F))
-                    .padding(12.dp)
+                    .padding(if (selectedPowerMode == PowerDisplayMode.CURVE) 2.dp else 12.dp)
             ) {
                 if (selectedPowerMode == PowerDisplayMode.POWER_BAR) {
                     PowerBarVisualization(data, settings, modifier = Modifier.fillMaxSize())
                 } else {
                     PowerCurveVisualization(
                         history = uiState.powerHistory.ifEmpty { listOf(data.displayPower()) },
+                        settings = settings,
                         color = powerAccentColor(data, settings),
                         modifier = Modifier.fillMaxSize()
                     )
@@ -585,6 +585,8 @@ private fun PowerBarVisualization(
         label = "power-bar-ratio"
     )
     val percent = (targetRatio * 100).roundToInt()
+    val powerValue = data.displayPower()
+    val isCharging = powerValue < 0.0
     val color = powerAccentColor(data, settings)
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -606,16 +608,18 @@ private fun PowerBarVisualization(
                 style = Stroke(width = 1.2.dp.toPx()),
                 cornerRadius = CornerRadius(radius, radius)
             )
-            val fillWidth = (panel.width * animatedRatio).coerceAtLeast(if (animatedRatio > 0.01f) radius else 0f)
+            val fillWidth = (panel.width * animatedRatio)
+                .coerceAtLeast(if (animatedRatio > 0.01f) radius else 0f)
+                .coerceAtMost(panel.width)
             if (fillWidth > 0f) {
-                val fillRect = Rect(panel.left, panel.top, panel.left + fillWidth, panel.bottom)
+                val fillRect = if (isCharging) {
+                    Rect(panel.right - fillWidth, panel.top, panel.right, panel.bottom)
+                } else {
+                    Rect(panel.left, panel.top, panel.left + fillWidth, panel.bottom)
+                }
                 drawRoundRect(
                     brush = Brush.horizontalGradient(
-                        listOf(
-                            color.copy(alpha = 0.95f),
-                            color,
-                            Color.White.copy(alpha = 0.34f)
-                        ),
+                        powerBarGradientColors(data, settings, isCharging),
                         startX = fillRect.left,
                         endX = fillRect.right
                     ),
@@ -650,17 +654,22 @@ private fun PowerBarVisualization(
 @Composable
 private fun PowerCurveVisualization(
     history: List<Double>,
+    settings: DashboardSettings,
     color: Color,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val maxAbs = max(10.0, history.maxOfOrNull { abs(it) } ?: 10.0)
-            val left = 24.dp.toPx()
-            val right = size.width - 18.dp.toPx()
-            val top = 18.dp.toPx()
-            val bottom = size.height - 28.dp.toPx()
-            val zeroY = (top + bottom) / 2f
+            val dischargeBase = settings.dischargeBaseW.coerceAtLeast(1.0)
+            val chargeBase = settings.chargeBaseW.coerceAtLeast(1.0)
+            val left = 6.dp.toPx()
+            val right = size.width - 6.dp.toPx()
+            val top = 6.dp.toPx()
+            val bottom = size.height - 6.dp.toPx()
+            val chartHeight = (bottom - top).coerceAtLeast(1f)
+            val dischargeHeight = (chartHeight * (dischargeBase / (dischargeBase + chargeBase))).toFloat()
+            val chargeHeight = chartHeight - dischargeHeight
+            val zeroY = top + dischargeHeight
             drawRoundRect(
                 brush = Brush.verticalGradient(listOf(Color(0x33404F4B), Color(0x18000000))),
                 topLeft = Offset(left, top),
@@ -677,19 +686,19 @@ private fun PowerCurveVisualization(
                 val path = Path()
                 points.forEachIndexed { index, value ->
                     val x = left + (right - left) * index / (points.lastIndex.toFloat())
-                    val y = zeroY - ((value / maxAbs).toFloat() * (bottom - top) * 0.42f)
+                    val y = if (value >= 0.0) {
+                        val ratio = (value / dischargeBase).coerceIn(0.0, 1.0).toFloat()
+                        zeroY - dischargeHeight * ratio
+                    } else {
+                        val ratio = (abs(value) / chargeBase).coerceIn(0.0, 1.0).toFloat()
+                        zeroY + chargeHeight * ratio
+                    }
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                 }
                 drawPath(path, color.copy(alpha = 0.30f), style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round))
                 drawPath(path, color, style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round))
             }
         }
-        Text(
-            text = "最近功率曲线",
-            color = TextMuted,
-            fontSize = 16.sp,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)
-        )
     }
 }
 
@@ -1160,12 +1169,73 @@ private fun Color.toAndroidArgbCompat(): Int =
     android.graphics.Color.argb((alpha * 255).roundToInt(), (red * 255).roundToInt(), (green * 255).roundToInt(), (blue * 255).roundToInt())
 
 private fun powerAccentColor(data: BmsData, settings: DashboardSettings): Color {
-    val ratio = data.powerLoadRatio(settings)
-    return when {
-        ratio >= settings.powerRedStart -> Color(0xFFFF6565)
-        ratio >= settings.powerYellowStart -> Amber
-        else -> colorFrom(settings.powerColor, NeonGreen)
+    return powerGradientColor(
+        ratio = data.powerLoadRatio(settings),
+        settings = settings,
+        green = colorFrom(settings.powerColor, NeonGreen)
+    )
+}
+
+private fun powerBarGradientColors(
+    data: BmsData,
+    settings: DashboardSettings,
+    isCharging: Boolean
+): List<Color> {
+    val ratio = data.powerLoadRatio(settings).coerceIn(0.0, 1.0)
+    val green = colorFrom(settings.powerColor, NeonGreen)
+    val endColor = powerGradientColor(ratio, settings, green)
+    val yellowStart = settings.powerYellowStart.coerceIn(0.0, 1.0)
+    val redStart = settings.powerRedStart.coerceIn(yellowStart, 1.0)
+    val colors = when {
+        ratio <= yellowStart -> listOf(
+            green.copy(alpha = 0.95f),
+            endColor,
+            Color.White.copy(alpha = 0.34f)
+        )
+        ratio < redStart -> listOf(
+            green.copy(alpha = 0.95f),
+            endColor,
+            Color.White.copy(alpha = 0.34f)
+        )
+        else -> listOf(
+            green.copy(alpha = 0.95f),
+            Amber,
+            endColor,
+            Color.White.copy(alpha = 0.34f)
+        )
     }
+    return if (isCharging) colors.reversed() else colors
+}
+
+private fun powerGradientColor(
+    ratio: Double,
+    settings: DashboardSettings,
+    green: Color
+): Color {
+    val safeRatio = ratio.coerceIn(0.0, 1.0)
+    val yellowStart = settings.powerYellowStart.coerceIn(0.0, 1.0)
+    val redStart = settings.powerRedStart.coerceIn(yellowStart, 1.0)
+    return when {
+        safeRatio <= yellowStart -> green
+        safeRatio < redStart -> {
+            val progress = ((safeRatio - yellowStart) / (redStart - yellowStart).coerceAtLeast(0.0001)).toFloat()
+            lerpColor(green, Amber, progress)
+        }
+        else -> {
+            val progress = ((safeRatio - redStart) / (1.0 - redStart).coerceAtLeast(0.0001)).toFloat()
+            lerpColor(Amber, Color(0xFFFF6565), progress)
+        }
+    }
+}
+
+private fun lerpColor(start: Color, end: Color, fraction: Float): Color {
+    val t = fraction.coerceIn(0f, 1f)
+    return Color(
+        red = start.red + (end.red - start.red) * t,
+        green = start.green + (end.green - start.green) * t,
+        blue = start.blue + (end.blue - start.blue) * t,
+        alpha = start.alpha + (end.alpha - start.alpha) * t
+    )
 }
 
 private fun diffAccentColor(data: BmsData, settings: DashboardSettings): Color =

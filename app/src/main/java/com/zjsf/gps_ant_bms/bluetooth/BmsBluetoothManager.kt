@@ -14,7 +14,8 @@ import java.util.*
 class BmsBluetoothManager(
     private val context: Context,
     private val onDataReceived: (ByteArray) -> Unit,
-    private val onConnectionStateChanged: (Int) -> Unit
+    private val onConnectionStateChanged: (Int) -> Unit,
+    private val onRssiRead: (Int) -> Unit
 ) {
     private var bluetoothGatt: BluetoothGatt? = null
     private val bmsDataBuffer = mutableListOf<Byte>()
@@ -22,6 +23,7 @@ class BmsBluetoothManager(
     private val handler = Handler(Looper.getMainLooper())
     private var pollingInterval: Long = 1000 // 默认 1 秒
     private var isPolling = false
+    private var isRssiPolling = false
     
     private var lastConnectedDevice: BluetoothDevice? = null
     private var isAutoReconnectEnabled = true
@@ -46,6 +48,15 @@ class BmsBluetoothManager(
             }
         }
     }
+
+    private val rssiPollingRunnable = object : Runnable {
+        override fun run() {
+            if (isRssiPolling) {
+                readRemoteRssi()
+                handler.postDelayed(this, pollingInterval)
+            }
+        }
+    }
     
     private val reconnectRunnable = object : Runnable {
         override fun run() {
@@ -64,6 +75,7 @@ class BmsBluetoothManager(
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.i("BmsBtManager", "已连接到 GATT 服务器，开始发现服务...")
                 handler.removeCallbacks(reconnectRunnable)
+                startRssiPolling()
                 if (hasConnectPermission()) {
                     try {
                         gatt.discoverServices()
@@ -74,6 +86,7 @@ class BmsBluetoothManager(
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i("BmsBtManager", "断开连接")
                 stopPolling()
+                stopRssiPolling()
                 bluetoothGatt?.close()
                 bluetoothGatt = null
                 
@@ -128,6 +141,15 @@ class BmsBluetoothManager(
                 handleIncomingData(value)
             }
         }
+
+        override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                onRssiRead(rssi)
+                Log.d("BmsBtManager", "RSSI读取成功: ${rssi}dBm")
+            } else {
+                Log.w("BmsBtManager", "RSSI读取失败: $status")
+            }
+        }
     }
 
     fun startPolling(intervalMs: Long = 1000) {
@@ -148,6 +170,34 @@ class BmsBluetoothManager(
         isPolling = false
         handler.removeCallbacks(pollingRunnable)
         Log.i("BmsBtManager", "轮询已停止")
+    }
+
+    private fun startRssiPolling() {
+        if (!isRssiPolling) {
+            isRssiPolling = true
+            handler.post(rssiPollingRunnable)
+            Log.i("BmsBtManager", "RSSI轮询已启动，间隔: ${pollingInterval}ms")
+        }
+    }
+
+    private fun stopRssiPolling() {
+        isRssiPolling = false
+        handler.removeCallbacks(rssiPollingRunnable)
+        Log.i("BmsBtManager", "RSSI轮询已停止")
+    }
+
+    private fun readRemoteRssi() {
+        val gatt = bluetoothGatt ?: return
+        if (hasConnectPermission()) {
+            try {
+                val requested = gatt.readRemoteRssi()
+                if (!requested) {
+                    Log.w("BmsBtManager", "RSSI读取请求未被接受")
+                }
+            } catch (e: SecurityException) {
+                Log.e("BmsBtManager", "读取RSSI时权限异常: ${e.message}")
+            }
+        }
     }
 
     /**
@@ -205,6 +255,7 @@ class BmsBluetoothManager(
         isAutoReconnectEnabled = false
         handler.removeCallbacks(reconnectRunnable)
         stopPolling()
+        stopRssiPolling()
         if (hasConnectPermission()) {
             try {
                 bluetoothGatt?.disconnect()

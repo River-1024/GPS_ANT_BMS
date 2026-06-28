@@ -308,6 +308,12 @@ class MainActivity : AppCompatActivity() {
                         statusMessage = buildStatusMessage(connected = connected, gpsLive = currentSpeed > 0.0)
                     )
                 }
+            },
+            onRssiRead = { rssi ->
+                runOnUiThread {
+                    lastSelectedDeviceRssi = rssi
+                    uiState = uiState.copy(bluetoothRssi = rssi)
+                }
             }
         )
 
@@ -353,7 +359,6 @@ class MainActivity : AppCompatActivity() {
                 bmsData = data,
                 connected = true,
                 previewMode = false,
-                bluetoothRssi = lastSelectedDeviceRssi ?: uiState.bluetoothRssi,
                 statusMessage = buildStatusMessage(connected = true, gpsLive = currentSpeed > 0.0),
                 powerHistory = nextHistory,
                 errorMessage = null
