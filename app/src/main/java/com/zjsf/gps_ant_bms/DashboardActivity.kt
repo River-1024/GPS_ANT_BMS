@@ -1,21 +1,23 @@
 package com.zjsf.gps_ant_bms
 
-import android.content.Context
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.TypedValue
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.zjsf.gps_ant_bms.model.DashboardData
 import com.zjsf.gps_ant_bms.model.BmsLiveDataStore
+import com.zjsf.gps_ant_bms.model.DashboardData
+import com.zjsf.gps_ant_bms.model.DashboardSettings
+import com.zjsf.gps_ant_bms.model.DashboardSettingsStore
 import com.zjsf.gps_ant_bms.ui.PowerBarView
 import com.zjsf.gps_ant_bms.ui.PowerChartView
+import com.zjsf.gps_ant_bms.ui.SocFillView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -23,30 +25,35 @@ import kotlin.math.abs
 
 class DashboardActivity : AppCompatActivity() {
 
+    private lateinit var socFillView: SocFillView
     private lateinit var textSoc: TextView
+    private lateinit var textRemaining: TextView
+    private lateinit var textRange: TextView
+    private lateinit var textPowerMetric: TextView
     private lateinit var textVoltage: TextView
     private lateinit var textCurrent: TextView
-    private lateinit var textSpeed: TextView
-    private lateinit var textTemp: TextView
     private lateinit var textVoltageDiff: TextView
-    private lateinit var textCapacity: TextView
-    private lateinit var textRemaining: TextView
+    private lateinit var textTempMos: TextView
+    private lateinit var textTempBalancer: TextView
+    private lateinit var textTempSensor1: TextView
+    private lateinit var textTempSensor2: TextView
     private lateinit var textSoh: TextView
     private lateinit var textPower: TextView
     private lateinit var textBleStatus: TextView
     private lateinit var textGpsStatus: TextView
     private lateinit var textUpdateTime: TextView
-    private lateinit var buttonPowerBar: Button
-    private lateinit var buttonPowerChart: Button
-    private lateinit var buttonBack: Button
-    private lateinit var editMaxPower: EditText
+    private lateinit var buttonPowerBar: TextView
+    private lateinit var buttonPowerChart: TextView
+    private lateinit var buttonBack: TextView
     private lateinit var powerBarView: PowerBarView
     private lateinit var powerChartView: PowerChartView
+    private lateinit var metricValueViews: List<TextView>
+    private lateinit var longMetricValueViews: List<TextView>
+    private lateinit var tempValueViews: List<TextView>
 
     private val handler = Handler(Looper.getMainLooper())
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-    private var powerMode = POWER_MODE_BAR
-    private var maxPower = DEFAULT_MAX_POWER
+    private var settings = DashboardSettings()
     private var lastLoggedPreviewMode: Boolean? = null
 
     private val refreshRunnable = object : Runnable {
@@ -61,15 +68,10 @@ class DashboardActivity : AppCompatActivity() {
         AppLogger.i(TAG, "onCreate start")
         try {
             setContentView(R.layout.activity_dashboard)
-            AppLogger.d(TAG, "content view set")
             hideSystemBars()
-            AppLogger.d(TAG, "system bars hidden after content view")
             initViews()
-            AppLogger.d(TAG, "views initialized")
-            loadPreferences()
-            AppLogger.d(TAG, "preferences loaded, powerMode=$powerMode, maxPower=$maxPower")
             bindEvents()
-            applyPowerMode()
+            reloadSettings()
             refreshDashboard()
             AppLogger.i(TAG, "onCreate complete")
         } catch (e: Exception) {
@@ -81,27 +83,29 @@ class DashboardActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        AppLogger.d(TAG, "onResume")
         hideSystemBars()
+        reloadSettings()
         handler.post(refreshRunnable)
     }
 
     override fun onPause() {
         super.onPause()
-        AppLogger.d(TAG, "onPause")
         handler.removeCallbacks(refreshRunnable)
-        saveMaxPowerFromInput(showToast = false)
     }
 
     private fun initViews() {
+        socFillView = findViewById(R.id.socFillView)
         textSoc = findViewById(R.id.textSoc)
+        textRemaining = findViewById(R.id.textRemaining)
+        textRange = findViewById(R.id.textRange)
+        textPowerMetric = findViewById(R.id.textPowerMetric)
         textVoltage = findViewById(R.id.textVoltage)
         textCurrent = findViewById(R.id.textCurrent)
-        textSpeed = findViewById(R.id.textSpeed)
-        textTemp = findViewById(R.id.textTemp)
         textVoltageDiff = findViewById(R.id.textVoltageDiff)
-        textCapacity = findViewById(R.id.textCapacity)
-        textRemaining = findViewById(R.id.textRemaining)
+        textTempMos = findViewById(R.id.textTempMos)
+        textTempBalancer = findViewById(R.id.textTempBalancer)
+        textTempSensor1 = findViewById(R.id.textTempSensor1)
+        textTempSensor2 = findViewById(R.id.textTempSensor2)
         textSoh = findViewById(R.id.textSoh)
         textPower = findViewById(R.id.textPower)
         textBleStatus = findViewById(R.id.textBleStatus)
@@ -110,42 +114,44 @@ class DashboardActivity : AppCompatActivity() {
         buttonPowerBar = findViewById(R.id.buttonPowerBar)
         buttonPowerChart = findViewById(R.id.buttonPowerChart)
         buttonBack = findViewById(R.id.buttonBack)
-        editMaxPower = findViewById(R.id.editMaxPower)
         powerBarView = findViewById(R.id.powerBarView)
         powerChartView = findViewById(R.id.powerChartView)
-    }
-
-    private fun loadPreferences() {
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        powerMode = prefs.getString(PREF_POWER_MODE, POWER_MODE_BAR) ?: POWER_MODE_BAR
-        maxPower = prefs.getFloat(PREF_MAX_POWER, DEFAULT_MAX_POWER.toFloat()).toDouble()
-        editMaxPower.setText(maxPower.toInt().toString())
+        metricValueViews = listOf(
+            textRemaining,
+            textRange,
+            textPowerMetric,
+            textVoltage,
+            textCurrent,
+            textVoltageDiff,
+            textSoh
+        )
+        longMetricValueViews = listOf(textRemaining, textRange, textVoltage)
+        tempValueViews = listOf(textTempMos, textTempBalancer, textTempSensor1, textTempSensor2)
     }
 
     private fun bindEvents() {
         buttonPowerBar.setOnClickListener {
-            powerMode = POWER_MODE_BAR
-            savePowerMode()
+            settings = settings.copy(powerMode = DashboardSettingsStore.POWER_MODE_BAR)
+            DashboardSettingsStore.save(this, settings)
             applyPowerMode()
         }
         buttonPowerChart.setOnClickListener {
-            powerMode = POWER_MODE_CHART
-            savePowerMode()
+            settings = settings.copy(powerMode = DashboardSettingsStore.POWER_MODE_CHART)
+            DashboardSettingsStore.save(this, settings)
             applyPowerMode()
-        }
-        editMaxPower.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) saveMaxPowerFromInput(showToast = true)
-        }
-        editMaxPower.setOnEditorActionListener { _, _, _ ->
-            saveMaxPowerFromInput(showToast = true)
-            editMaxPower.clearFocus()
-            true
         }
         buttonBack.setOnClickListener { finish() }
     }
 
+    private fun reloadSettings() {
+        settings = DashboardSettingsStore.load(this)
+        applyValueTextScale()
+        applyWindowSettings()
+        applyPowerMode()
+    }
+
     private fun applyPowerMode() {
-        val chartMode = powerMode == POWER_MODE_CHART
+        val chartMode = settings.powerMode == DashboardSettingsStore.POWER_MODE_CHART
         buttonPowerBar.isSelected = !chartMode
         buttonPowerChart.isSelected = chartMode
         powerBarView.visibility = if (chartMode) View.GONE else View.VISIBLE
@@ -157,6 +163,7 @@ class DashboardActivity : AppCompatActivity() {
         val previewMode = !liveData.isBmsConnected
         val data = if (previewMode) PREVIEW_DATA else liveData
         val history = if (previewMode) PREVIEW_POWER_HISTORY else BmsLiveDataStore.powerHistorySnapshot()
+
         if (lastLoggedPreviewMode != previewMode) {
             AppLogger.i(
                 TAG,
@@ -165,31 +172,37 @@ class DashboardActivity : AppCompatActivity() {
             lastLoggedPreviewMode = previewMode
         }
 
-        textSoc.text = "${data.soc}%"
-        textSoc.setTextColor(
-            when {
-                data.soc < 20 -> 0xFFFF706F.toInt()
-                data.soc < 60 -> 0xFFFFD86B.toInt()
-                else -> 0xFF77F06F.toInt()
-            }
-        )
+        val remainingRange = data.remainingCharge * settings.rangeCoefficient
+
+        val socColor = socColor(data.soc)
+        socFillView.setSoc(data.soc, socColor)
+        textSoc.text = data.soc.toString()
+        textRemaining.text = "%.2fAh".format(data.remainingCharge)
+        textRange.text = "%.1fkm".format(remainingRange)
+        textPowerMetric.text = "%.0fW".format(data.power)
         textVoltage.text = "%.2fV".format(data.voltage)
         textCurrent.text = "%.1fA".format(data.current)
-        textSpeed.text = "%.1fkm/h".format(data.speed)
-        textTemp.text = "%d℃".format(data.mosTemp)
         textVoltageDiff.text = "${data.voltageDiff}mV"
-        textCapacity.text = "%.0fAh".format(data.capacity)
-        textRemaining.text = "%.0fAh".format(data.remainingCharge)
+        val displayedTemps = displayedTemperatures(data)
+        textTempMos.text = "%d°".format(displayedTemps[0])
+        textTempBalancer.text = displayedTemps.getOrNull(1)?.let { "%d°".format(it) } ?: ""
+        textTempSensor1.text = displayedTemps.getOrNull(2)?.let { "%d°".format(it) } ?: ""
+        textTempSensor2.text = displayedTemps.getOrNull(3)?.let { "%d°".format(it) } ?: ""
         textSoh.text = "${data.soh}%"
 
+        textRemaining.setTextColor(settings.remainingColor)
+        textRange.setTextColor(settings.rangeColor)
+        textPowerMetric.setTextColor(powerColor(data.power))
+        textVoltage.setTextColor(settings.voltageColor)
+        textCurrent.setTextColor(settings.currentColor)
+        textVoltageDiff.setTextColor(voltageDiffColor(data.voltageDiff))
+        tempValueViews.forEach {
+            it.setTextColor(tempColor(it.text.toString().filter(Char::isDigit).toIntOrNull() ?: data.mosTemp))
+        }
+        textSoh.setTextColor(settings.sohColor)
+
         textPower.text = "%.0fW".format(data.power)
-        textPower.setTextColor(
-            when {
-                data.power < 0.0 -> 0xFF62A8FF.toInt()
-                abs(data.power) >= maxPower * 0.9 -> 0xFFFFD86B.toInt()
-                else -> 0xFF77F06F.toInt()
-            }
-        )
+        textPower.setTextColor(powerColor(data.power))
 
         textBleStatus.text = when {
             previewMode -> "预览模式"
@@ -209,37 +222,124 @@ class DashboardActivity : AppCompatActivity() {
             else -> "更新时间 --:--:--"
         }
 
-        powerBarView.setPower(data.power, maxPower)
-        powerChartView.setData(history, maxPower)
+        val powerBase = if (data.power < 0.0) settings.chargePowerBase else settings.dischargePowerBase
+        powerBarView.setPower(
+            data.power,
+            powerBase,
+            settings.powerColor,
+            settings.powerYellowRatio,
+            settings.powerRedRatio
+        )
+        powerChartView.setData(history, powerBase, settings.powerColor)
     }
 
-    private fun savePowerMode() {
-        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(PREF_POWER_MODE, powerMode)
-            .apply()
-    }
-
-    private fun saveMaxPowerFromInput(showToast: Boolean) {
-        val parsed = editMaxPower.text.toString().toDoubleOrNull()
-        if (parsed == null || parsed < MIN_MAX_POWER || parsed > MAX_MAX_POWER) {
-            editMaxPower.setText(maxPower.toInt().toString())
-            if (showToast) {
-                Toast.makeText(this, "满量程范围 ${MIN_MAX_POWER.toInt()}-${MAX_MAX_POWER.toInt()}W", Toast.LENGTH_SHORT).show()
-            }
-            return
+    private fun applyWindowSettings() {
+        requestedOrientation = when (settings.orientationMode) {
+            DashboardSettingsStore.ORIENTATION_SENSOR -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+            else -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
+        val brightness = when (settings.brightnessMode) {
+            DashboardSettingsStore.BRIGHTNESS_50 -> 0.5f
+            DashboardSettingsStore.BRIGHTNESS_75 -> 0.75f
+            DashboardSettingsStore.BRIGHTNESS_100 -> 1.0f
+            else -> -1f
+        }
+        window.attributes = window.attributes.apply {
+            screenBrightness = brightness
+        }
+    }
 
-        maxPower = parsed
-        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putFloat(PREF_MAX_POWER, maxPower.toFloat())
-            .apply()
-        refreshDashboard()
+    private fun applyValueTextScale() {
+        val scale = settings.valueTextScale.toFloat()
+        textSoc.textSize = 76f * scale
+        textPower.textSize = 34f * scale
+
+        metricValueViews.forEach { view ->
+            view.textSize = 32f * scale
+            view.setHorizontallyScrolling(false)
+            view.setAutoSizeTextTypeUniformWithConfiguration(
+                18,
+                (32f * scale).toInt().coerceAtLeast(18),
+                1,
+                TypedValue.COMPLEX_UNIT_SP
+            )
+        }
+        longMetricValueViews.forEach { view ->
+            view.textSize = 28f * scale
+            view.setAutoSizeTextTypeUniformWithConfiguration(
+                16,
+                (28f * scale).toInt().coerceAtLeast(16),
+                1,
+                TypedValue.COMPLEX_UNIT_SP
+            )
+        }
+        tempValueViews.forEach { view ->
+            view.textSize = 20f * scale
+            view.setHorizontallyScrolling(false)
+            view.setAutoSizeTextTypeUniformWithConfiguration(
+                14,
+                (20f * scale).toInt().coerceAtLeast(14),
+                1,
+                TypedValue.COMPLEX_UNIT_SP
+            )
+        }
+    }
+
+    private fun powerColor(power: Double): Int {
+        val base = if (power < 0.0) settings.chargePowerBase else settings.dischargePowerBase
+        val ratio = (abs(power) / base).coerceIn(0.0, 1.0)
+        return when {
+            power < 0.0 -> 0xFF62A8FF.toInt()
+            ratio >= settings.powerRedRatio -> 0xFFFF706F.toInt()
+            ratio >= settings.powerYellowRatio -> 0xFFF4C85A.toInt()
+            else -> settings.powerColor
+        }
+    }
+
+    private fun socColor(soc: Int): Int {
+        return when {
+            soc <= settings.socRedUpper -> 0xFFFF706F.toInt()
+            soc <= settings.socYellowUpper -> 0xFFF4C85A.toInt()
+            else -> settings.socColor
+        }
+    }
+
+    private fun voltageDiffColor(diff: Int): Int {
+        return when {
+            diff <= settings.voltageDiffGreenUpper -> settings.diffColor
+            diff <= settings.voltageDiffYellowUpper -> 0xFFF4C85A.toInt()
+            else -> 0xFFFF706F.toInt()
+        }
+    }
+
+    private fun tempColor(temp: Int): Int {
+        return when {
+            temp <= settings.tempGreenUpper -> settings.tempColor
+            temp <= settings.tempYellowUpper -> 0xFFF4C85A.toInt()
+            else -> 0xFFFF706F.toInt()
+        }
+    }
+
+    private fun DashboardData.sensorTempOrDefault(index: Int): Int {
+        return sensorTemps.getOrNull(index) ?: mosTemp
+    }
+
+    private fun displayedTemperatures(data: DashboardData): List<Int> {
+        val all = listOf(
+            data.mosTemp,
+            data.balancerTemp,
+            data.sensorTempOrDefault(0),
+            data.sensorTempOrDefault(1)
+        )
+        return when (settings.tempDisplayMode) {
+            DashboardSettingsStore.TEMP_MODE_MOS -> listOf(data.mosTemp)
+            DashboardSettingsStore.TEMP_MODE_BALANCER -> listOf(data.balancerTemp)
+            DashboardSettingsStore.TEMP_MODE_MAX -> listOf(all.maxOrNull() ?: data.mosTemp)
+            else -> all
+        }
     }
 
     private fun hideSystemBars() {
-        AppLogger.d(TAG, "hideSystemBars sdk=${android.os.Build.VERSION.SDK_INT}")
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             val hidden = runCatching {
                 val controller = window.decorView.windowInsetsController
@@ -276,30 +376,24 @@ class DashboardActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "DashboardActivity"
-        private const val PREFS_NAME = "DashboardPrefs"
-        private const val PREF_POWER_MODE = "power_mode"
-        private const val PREF_MAX_POWER = "max_power"
-        private const val POWER_MODE_BAR = "bar"
-        private const val POWER_MODE_CHART = "chart"
-        private const val DEFAULT_MAX_POWER = 1000.0
-        private const val MIN_MAX_POWER = 100.0
-        private const val MAX_MAX_POWER = 20000.0
 
         private val PREVIEW_DATA = DashboardData(
             speed = 31.8,
-            voltage = 100.0,
-            current = 2.0,
-            voltageDiff = 32,
-            soc = 80,
-            power = 200.0,
-            capacity = 400.0,
-            remainingCharge = 320.0,
-            mosTemp = 31,
-            soh = 96
+            voltage = 81.18,
+            current = 0.0,
+            voltageDiff = 7,
+            soc = 92,
+            power = 8.0,
+            capacity = 134.0,
+            remainingCharge = 121.4,
+            mosTemp = 35,
+            balancerTemp = 37,
+            sensorTemps = listOf(34, 34),
+            soh = 100
         )
         private val PREVIEW_POWER_HISTORY = listOf(
-            80.0, 120.0, 160.0, 130.0, 210.0, 260.0, 230.0, 310.0,
-            280.0, 350.0, 320.0, 390.0, 430.0, 380.0, 250.0, 200.0
+            2.0, 4.0, 6.0, 5.0, 8.0, 9.0, 7.0, 12.0,
+            10.0, 8.0, 6.0, 7.0, 8.0, 9.0, 8.0, 8.0
         )
     }
 }

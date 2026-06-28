@@ -18,13 +18,13 @@ class PowerBarView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(168, 5, 19, 18)
+        color = Color.argb(20, 255, 255, 255)
         style = Paint.Style.FILL
     }
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(180, 230, 255, 250)
+        color = Color.TRANSPARENT
         style = Paint.Style.STROKE
-        strokeWidth = dp(2f)
+        strokeWidth = dp(0f)
     }
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(119, 240, 111)
@@ -43,14 +43,21 @@ class PowerBarView @JvmOverloads constructor(
     private var power = 0.0
     private var maxPower = 1000.0
 
-    fun setPower(power: Double, maxPower: Double) {
+    fun setPower(
+        power: Double,
+        maxPower: Double,
+        normalColor: Int = Color.rgb(119, 240, 111),
+        yellowRatio: Double = 0.55,
+        redRatio: Double = 0.9
+    ) {
         this.power = power
         this.maxPower = max(100.0, maxPower)
         targetRatio = (abs(power) / this.maxPower).coerceIn(0.0, 1.0).toFloat()
         fillPaint.color = when {
             power < 0.0 -> Color.rgb(98, 168, 255)
-            targetRatio >= 0.9f -> Color.rgb(255, 216, 107)
-            else -> Color.rgb(119, 240, 111)
+            targetRatio >= redRatio.toFloat() -> Color.rgb(255, 112, 111)
+            targetRatio >= yellowRatio.toFloat() -> Color.rgb(244, 200, 90)
+            else -> normalColor
         }
 
         animator?.cancel()
@@ -67,7 +74,7 @@ class PowerBarView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val radius = dp(7f)
+        val radius = dp(8f)
         rect.set(
             paddingLeft.toFloat(),
             paddingTop.toFloat(),
@@ -96,7 +103,9 @@ class PowerBarView @JvmOverloads constructor(
             )
         }
 
-        canvas.drawRoundRect(rect, radius, radius, strokePaint)
+        if (strokePaint.strokeWidth > 0f) {
+            canvas.drawRoundRect(rect, radius, radius, strokePaint)
+        }
 
         val percent = (targetRatio * 100f).toInt()
         textPaint.textSize = (height * 0.38f).coerceAtLeast(dp(18f))

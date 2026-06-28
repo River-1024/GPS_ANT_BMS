@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bmsDataTextView: TextView
     private lateinit var scanButton: android.widget.Button
     private lateinit var dashboardButton: android.widget.Button
+    private lateinit var dashboardSettingsButton: android.widget.Button
     private lateinit var viewLogButton: android.widget.Button
     private lateinit var floatingWindowSwitch: android.widget.Switch
     private lateinit var hideFromRecentsSwitch: android.widget.Switch
@@ -175,6 +176,7 @@ class MainActivity : AppCompatActivity() {
         bmsDataTextView = findViewById(R.id.textViewBmsData)
         scanButton = findViewById(R.id.buttonScanBle)
         dashboardButton = findViewById(R.id.buttonDashboard)
+        dashboardSettingsButton = findViewById(R.id.buttonDashboardSettings)
         viewLogButton = findViewById(R.id.buttonViewLog)
         floatingWindowSwitch = findViewById(R.id.switchFloatingWindow)
         hideFromRecentsSwitch = findViewById(R.id.switchHideFromRecents)
@@ -221,6 +223,10 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "仪表盘启动失败，正在显示日志", Toast.LENGTH_SHORT).show()
                 showLogDialog("仪表盘启动失败")
             }
+        }
+
+        dashboardSettingsButton.setOnClickListener {
+            startActivity(Intent(this, DashboardSettingsActivity::class.java))
         }
     }
 

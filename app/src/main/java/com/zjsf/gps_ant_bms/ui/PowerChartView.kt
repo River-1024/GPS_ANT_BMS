@@ -17,23 +17,23 @@ class PowerChartView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(148, 5, 19, 18)
+        color = Color.rgb(16, 23, 21)
         style = Paint.Style.FILL
     }
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(150, 230, 255, 250)
+        color = Color.TRANSPARENT
         style = Paint.Style.STROKE
-        strokeWidth = dp(1.5f)
+        strokeWidth = dp(0f)
     }
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(36, 230, 255, 250)
+        color = Color.argb(18, 243, 250, 247)
         style = Paint.Style.STROKE
         strokeWidth = dp(1f)
     }
     private val zeroPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(128, 244, 255, 251)
+        color = Color.argb(46, 243, 250, 247)
         style = Paint.Style.STROKE
-        strokeWidth = dp(1.5f)
+        strokeWidth = dp(1f)
     }
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(119, 240, 111)
@@ -43,7 +43,7 @@ class PowerChartView @JvmOverloads constructor(
         strokeWidth = dp(3f)
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(185, 210, 204)
+        color = Color.rgb(95, 113, 108)
         textSize = dp(12f)
     }
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -56,9 +56,11 @@ class PowerChartView @JvmOverloads constructor(
     private var points: List<Double> = emptyList()
     private var maxPower = 1000.0
 
-    fun setData(points: List<Double>, maxPower: Double) {
+    fun setData(points: List<Double>, maxPower: Double, lineColor: Int = Color.rgb(119, 240, 111)) {
         this.points = points
         this.maxPower = max(100.0, maxPower)
+        linePaint.color = lineColor
+        pointPaint.color = lineColor
         invalidate()
     }
 
@@ -84,7 +86,9 @@ class PowerChartView @JvmOverloads constructor(
 
         val zeroY = rect.centerY()
         canvas.drawLine(rect.left, zeroY, rect.right, zeroY, zeroPaint)
-        canvas.drawRoundRect(rect, radius, radius, borderPaint)
+        if (borderPaint.strokeWidth > 0f) {
+            canvas.drawRoundRect(rect, radius, radius, borderPaint)
+        }
 
         textPaint.textSize = dp(12f)
         canvas.drawText("+${maxPower.toInt()}W", rect.left + dp(8f), rect.top + dp(17f), textPaint)

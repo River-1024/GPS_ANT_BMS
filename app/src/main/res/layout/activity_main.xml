@@ -66,6 +66,16 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:text="横屏仪表盘"
+        app:layout_constraintBottom_toTopOf="@id/buttonDashboardSettings"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/buttonDashboardSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="仪表盘设置"
         app:layout_constraintBottom_toTopOf="@id/buttonViewLog"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

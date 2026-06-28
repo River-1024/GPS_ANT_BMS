@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_dashboard_root"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="仪表盘设置"
+            android:textColor="#F3FAF7"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_dashboard_panel"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:layout_marginTop="0dp"
+                android:text="功率满量程 W" />
+            <EditText
+                android:id="@+id/editMaxPower"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="续航系数 km/Ah" />
+            <EditText
+                android:id="@+id/editRangeCoefficient"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="数值大小比例" />
+            <EditText
+                android:id="@+id/editValueTextScale"
+                style="@style/DashboardSettingsInput"
+                android:hint="0.85 - 1.15，默认 1.0"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="默认功率显示模式" />
+            <RadioGroup
+                android:id="@+id/radioPowerMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/radioPowerBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#39E36C"
+                    android:text="功率条"
+                    android:textColor="#F3FAF7" />
+
+                <RadioButton
+                    android:id="@+id/radioPowerChart"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:buttonTint="#39E36C"
+                    android:text="曲线图"
+                    android:textColor="#F3FAF7" />
+            </RadioGroup>
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="温度显示来源" />
+            <Spinner
+                android:id="@+id/spinnerTempDisplayMode"
+                style="@style/DashboardSettingsSpinner" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="屏幕亮度" />
+            <Spinner
+                android:id="@+id/spinnerBrightness"
+                style="@style/DashboardSettingsSpinner" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="屏幕方向" />
+            <Spinner
+                android:id="@+id/spinnerOrientation"
+                style="@style/DashboardSettingsSpinner" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_dashboard_panel"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                style="@style/DashboardSettingsHint"
+                android:layout_marginTop="0dp"
+                android:text="阈值用于仪表盘颜色和功率条颜色切换。" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="放电功率条基数 W" />
+            <EditText
+                android:id="@+id/editDischargePowerBase"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="充电功率条基数 W" />
+            <EditText
+                android:id="@+id/editChargePowerBase"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="功率条黄色起点 0-1" />
+            <EditText
+                android:id="@+id/editPowerYellowRatio"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="功率条红色起点 0-1" />
+            <EditText
+                android:id="@+id/editPowerRedRatio"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="电量红色上限 %" />
+            <EditText
+                android:id="@+id/editSocRedUpper"
+                style="@style/DashboardSettingsInput"
+                android:inputType="number" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="电量黄色上限 %" />
+            <EditText
+                android:id="@+id/editSocYellowUpper"
+                style="@style/DashboardSettingsInput"
+                android:inputType="number" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="压差绿色上限 mV" />
+            <EditText
+                android:id="@+id/editVoltageDiffGreenUpper"
+                style="@style/DashboardSettingsInput"
+                android:inputType="number" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="压差黄色上限 mV" />
+            <EditText
+                android:id="@+id/editVoltageDiffYellowUpper"
+                style="@style/DashboardSettingsInput"
+                android:inputType="number" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="温度绿色上限 °C" />
+            <EditText
+                android:id="@+id/editTempGreenUpper"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="温度黄色上限 °C" />
+            <EditText
+                android:id="@+id/editTempYellowUpper"
+                style="@style/DashboardSettingsInput"
+                android:inputType="numberDecimal" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_dashboard_panel"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                style="@style/DashboardSettingsHint"
+                android:layout_marginTop="0dp"
+                android:text="颜色格式为 #RRGGBB，例如 #39E36C" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="SOC 颜色" />
+            <EditText
+                android:id="@+id/editSocColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="剩余Ah颜色" />
+            <EditText
+                android:id="@+id/editRemainingColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="剩余续航颜色" />
+            <EditText
+                android:id="@+id/editRangeColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="功率颜色" />
+            <EditText
+                android:id="@+id/editPowerColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="电压颜色" />
+            <EditText
+                android:id="@+id/editVoltageColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="电流颜色" />
+            <EditText
+                android:id="@+id/editCurrentColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="压差颜色" />
+            <EditText
+                android:id="@+id/editDiffColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="温度颜色" />
+            <EditText
+                android:id="@+id/editTempColor"
+                style="@style/DashboardSettingsInput" />
+
+            <TextView
+                style="@style/DashboardSettingsLabel"
+                android:text="SOH颜色" />
+            <EditText
+                android:id="@+id/editSohColor"
+                style="@style/DashboardSettingsInput" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/buttonSave"
+            style="@style/DashboardSettingsButton"
+            android:layout_marginTop="14dp"
+            android:text="保存" />
+
+        <Button
+            android:id="@+id/buttonCancel"
+            style="@style/DashboardSettingsButton"
+            android:text="返回" />
+    </LinearLayout>
+</ScrollView>
