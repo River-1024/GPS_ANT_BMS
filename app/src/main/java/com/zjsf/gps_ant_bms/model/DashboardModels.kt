@@ -233,7 +233,25 @@ fun previewBmsData(): BmsData = BmsData(
     soh = 100,
     power = 8.0,
     runtime = 0,
-    voltageDiff = 7
+    voltageDiff = 7,
+    chargeMosOn = true,
+    dischargeMosOn = true,
+    balanceStatus = 1,
+    balanceMask = 0x000005L,
+    maxCellVoltage = 3385,
+    maxCellIndex = 3,
+    minCellVoltage = 3378,
+    minCellIndex = 18,
+    averageCellVoltage = 3382,
+    cycleCapacity = 643.5,
+    totalDischargeCapacity = 12840.6,
+    totalChargeCapacity = 13102.4,
+    totalDischargeTime = 86400L * 180,
+    totalChargeTime = 86400L * 42,
+    bmsStatusCode = 1,
+    bmsStatusText = "待机",
+    frameLength = 140,
+    unparsedBytes = 0
 )
 
 fun dynamicPreviewBmsData(tick: Long): BmsData {
@@ -246,6 +264,9 @@ fun dynamicPreviewBmsData(tick: Long): BmsData {
     val remaining = 118.0 + wave * 4.5
     val tempBase = 35 + (fastWave * 4).roundToInt()
     val diff = (8 + abs(wave) * 34).roundToInt()
+    val cells = List(24) { 3352 + ((it * 5 + tick.toInt()) % 41) }
+    val maxV = cells.maxOrNull() ?: 0
+    val minV = cells.minOrNull() ?: 0
     return BmsData(
         totalVoltage = voltage,
         current = current,
@@ -254,12 +275,38 @@ fun dynamicPreviewBmsData(tick: Long): BmsData {
         remainingCharge = remaining,
         mosTemp = tempBase,
         balancerTemp = tempBase + 2,
-        cellVoltages = List(24) { 3352 + ((it * 5 + tick.toInt()) % 41) },
+        cellVoltages = cells,
         temperatures = listOf(tempBase, tempBase + 2, tempBase - 1, tempBase + 1),
         soh = 100,
         power = power,
         runtime = tick,
-        voltageDiff = diff
+        voltageDiff = diff,
+        chargeMosOn = current <= 0.0,
+        dischargeMosOn = current >= 0.0,
+        balanceStatus = if (diff > 28) 1 else 0,
+        balanceMask = if (diff > 28) 0x000005L else 0L,
+        maxCellVoltage = maxV,
+        maxCellIndex = cells.indexOf(maxV).takeIf { it >= 0 }?.plus(1),
+        minCellVoltage = minV,
+        minCellIndex = cells.indexOf(minV).takeIf { it >= 0 }?.plus(1),
+        averageCellVoltage = cells.average().roundToInt(),
+        cycleCapacity = 643.5 + tick * 0.01,
+        totalDischargeCapacity = 12840.6 + tick * 0.05,
+        totalChargeCapacity = 13102.4 + tick * 0.04,
+        totalDischargeTime = 86400L * 180 + tick * 2,
+        totalChargeTime = 86400L * 42 + tick,
+        bmsStatusCode = when {
+            current < -0.2 -> 2
+            current > 0.2 -> 3
+            else -> 1
+        },
+        bmsStatusText = when {
+            current < -0.2 -> "充电中"
+            current > 0.2 -> "放电中"
+            else -> "待机"
+        },
+        frameLength = 140,
+        unparsedBytes = 0
     )
 }
 

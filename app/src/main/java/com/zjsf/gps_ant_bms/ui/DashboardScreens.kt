@@ -1023,6 +1023,7 @@ private fun DashboardDetailsScreen(
                     StatusRow("蓝牙信号", formatRssi(uiState.bluetoothRssi))
                     StatusRow("GPS", "%.2f km/h".format(uiState.gpsSpeedKmh))
                     StatusRow("状态", uiState.statusMessage)
+                    StatusRow("保护板状态", data.bmsStatusText)
                     StatusRow("上次设备", uiState.lastDeviceAddress ?: "无")
                 }
             }
@@ -1041,6 +1042,40 @@ private fun DashboardDetailsScreen(
                     StatusRow("均衡温度", "${data.balancerTemp} °C")
                     StatusRow("传感器温度", data.temperatures.joinToString(", ").ifBlank { "无" })
                     StatusRow("运行时间", formatRuntime(data.runtime))
+                }
+            }
+            item {
+                SettingsGroup(title = "电芯统计") {
+                    StatusRow("串数", "${data.cellVoltages.size} S")
+                    StatusRow("平均电压", formatCellVoltage(data.averageCellVoltage))
+                    StatusRow("最高电芯", formatCellExtreme(data.maxCellIndex, data.maxCellVoltage))
+                    StatusRow("最低电芯", formatCellExtreme(data.minCellIndex, data.minCellVoltage))
+                    StatusRow("协议压差", "${data.voltageDiff} mV")
+                }
+            }
+            item {
+                SettingsGroup(title = "MOS 与均衡") {
+                    StatusRow("充电 MOS", formatSwitchState(data.chargeMosOn))
+                    StatusRow("放电 MOS", formatSwitchState(data.dischargeMosOn))
+                    StatusRow("均衡状态", formatBalanceStatus(data.balanceStatus))
+                    StatusRow("均衡电芯", formatBalancedCells(data.balanceMask, data.cellVoltages.size))
+                    StatusRow("均衡掩码", formatHexMask(data.balanceMask))
+                }
+            }
+            item {
+                SettingsGroup(title = "容量统计") {
+                    StatusRow("循环容量", formatAh(data.cycleCapacity))
+                    StatusRow("累计充电", formatAh(data.totalChargeCapacity))
+                    StatusRow("累计放电", formatAh(data.totalDischargeCapacity))
+                    StatusRow("累计充电时间", formatRuntimeOrNone(data.totalChargeTime))
+                    StatusRow("累计放电时间", formatRuntimeOrNone(data.totalDischargeTime))
+                }
+            }
+            item {
+                SettingsGroup(title = "协议诊断") {
+                    StatusRow("状态码", data.bmsStatusCode?.toString() ?: "未知")
+                    StatusRow("帧长度", if (data.frameLength > 0) "${data.frameLength} bytes" else "未知")
+                    StatusRow("未解析字节", "${data.unparsedBytes} bytes")
                 }
             }
             item {
@@ -1272,3 +1307,45 @@ private fun formatRuntime(runtime: Long): String {
     val s = runtime % 60
     return "%d天 %02d:%02d:%02d".format(d, h, m, s)
 }
+
+private fun formatRuntimeOrNone(runtime: Long): String =
+    if (runtime <= 0L) "无" else formatRuntime(runtime)
+
+private fun formatCellVoltage(voltageMv: Int?): String =
+    voltageMv?.let { "%.3f V".format(it / 1000.0) } ?: "未知"
+
+private fun formatCellExtreme(index: Int?, voltageMv: Int?): String =
+    if (index != null && voltageMv != null) {
+        "Cell %02d  %.3f V".format(index, voltageMv / 1000.0)
+    } else {
+        "未知"
+    }
+
+private fun formatSwitchState(value: Boolean?): String =
+    when (value) {
+        true -> "开"
+        false -> "关"
+        null -> "未知"
+    }
+
+private fun formatBalanceStatus(status: Int?): String =
+    when (status) {
+        null -> "未知"
+        0 -> "未均衡"
+        1 -> "均衡中"
+        else -> "状态 $status"
+    }
+
+private fun formatBalancedCells(mask: Long, cellCount: Int): String {
+    if (mask == 0L || cellCount <= 0) return "无"
+    val cells = (0 until min(cellCount, 32))
+        .filter { index -> ((mask shr index) and 0x1L) == 1L }
+        .joinToString(", ") { index -> "Cell %02d".format(index + 1) }
+    return cells.ifBlank { "无" }
+}
+
+private fun formatHexMask(mask: Long): String =
+    if (mask == 0L) "0x00000000" else "0x%08X".format(mask)
+
+private fun formatAh(value: Double): String =
+    if (value <= 0.0) "无" else "%.2f Ah".format(value)
